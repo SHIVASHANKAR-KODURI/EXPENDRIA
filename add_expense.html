@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Expenses</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: url('14485905_5475310.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #1976d2;
+    }
+    .entry {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    }
+    .entry input {
+      flex: 1;
+      min-width: 120px; /* Ensure inputs don't get too small */
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      box-sizing: border-box; /* Include padding/border in width */
+    }
+    .remove-btn {
+      background: red;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      flex-shrink: 0; /* Prevent button from shrinking */
+    }
+    .btn {
+      background: #1976d2;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      margin: 10px 5px 0 0;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #125ca1;
+    }
+    .total {
+      text-align: right;
+      font-size: 1.2rem;
+      margin-top: 10px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap; /* Allow wrapping */
+      gap: 10px;
+    }
+    .add-btn-container {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .date-selector {
+      text-align: center;
+      margin-bottom: 15px;
+      width: 100%; /* Full width on small screens */
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+        body {
+            padding: 10px;
+        }
+        .container {
+            padding: 15px;
+        }
+        .top-bar {
+            flex-direction: column;
+            align-items: center;
+        }
+        .top-bar h2 {
+            margin: 10px 0;
+        }
+        .entry input {
+            min-width: unset;
+            width: calc(50% - 20px); /* Roughly half width for item/amount */
+        }
+        .entry .remove-btn {
+            width: calc(100% - 20px); /* Full width for remove button */
+            margin-top: 5px;
+        }
+        .btn {
+            width: 100%;
+            margin-right: 0;
+            margin-bottom: 10px;
+        }
+        .add-btn-container {
+            justify-content: center;
+        }
+    }
+    @media (max-width: 400px) {
+        .entry input {
+            width: 100%; /* Full width for inputs */
+        }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <button class="btn" onclick="window.location.href='home.html'">← Back</button>
+      <h2>Date: <span id="currentDateDisplay"></span></h2>
+      <div></div>
+    </div>
+
+    <form id="expenseForm">
+      <div class="date-selector">
+        <label for="date">Select Date:</label>
+        <input type="date" name="date" id="date" onchange="redirectWithDate(this.value)">
+      </div>
+
+      <div id="entries">
+        </div>
+
+      <div class="add-btn-container">
+        <button type="button" class="btn" onclick="addEntry()">+ Add Item</button>
+      </div>
+
+      <div class="total">Total: ₹<span id="total">0.00</span></div>
+      <button type="submit" class="btn">Done</button>
+    </form>
+  </div>
+
+  <script>
+    let expensesByDate = {}; // Global object to hold all expenses by date
+
+    function loadExpensesFromLocalStorage() {
+      const storedExpenses = localStorage.getItem('expendriaExpenses');
+      if (storedExpenses) {
+        expensesByDate = JSON.parse(storedExpenses);
+      }
+    }
+
+    function saveExpensesToLocalStorage() {
+      localStorage.setItem('expendriaExpenses', JSON.stringify(expensesByDate));
+    }
+
+    function updateTotal() {
+      let total = 0;
+      document.querySelectorAll(".amount").forEach(input => {
+        total += parseFloat(input.value) || 0;
+      });
+      document.getElementById("total").textContent = total.toFixed(2);
+    }
+
+    function addEntry(item = '', amount = '') {
+      const div = document.createElement("div");
+      div.className = "entry";
+      div.innerHTML = `<input type="text" name="item[]" placeholder="Item" value="${item}">
+                       <input type="number" name="amount[]" class="amount" placeholder="₹" step="0.01" min="0" value="${amount}" onchange="updateTotal()">
+                       <button type="button" class="remove-btn" onclick="this.parentElement.remove(); updateTotal();">X</button>`;
+      document.getElementById("entries").appendChild(div);
+    }
+
+    function displayExpensesForDate(selectedDate) {
+      const entriesDiv = document.getElementById("entries");
+      entriesDiv.innerHTML = ''; // Clear existing entries
+
+      const dateExpenses = expensesByDate[selectedDate] || [];
+      if (dateExpenses.length > 0) {
+        dateExpenses.forEach(expense => {
+          addEntry(expense.item, expense.amount);
+        });
+      } else {
+        addEntry(); // Add one empty entry if no expenses for the date
+      }
+      updateTotal();
+    }
+
+    function redirectWithDate(selectedDate) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('date', selectedDate);
+      window.history.pushState({}, '', url.toString()); // Update URL without reloading
+      document.getElementById("currentDateDisplay").textContent = new Date(selectedDate).toLocaleDateString('en-IN', {
+          day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'long'
+      }).replace(/\//g, '-');
+      displayExpensesForDate(selectedDate);
+    }
+
+    document.getElementById('expenseForm').addEventListener('submit', function(event) {
+      event.preventDefault(); // Prevent default form submission
+
+      const selectedDate = document.getElementById('date').value;
+      const currentEntries = [];
+      document.querySelectorAll('#entries .entry').forEach(entryDiv => {
+        const itemInput = entryDiv.querySelector('input[name="item[]"]');
+        const amountInput = entryDiv.querySelector('input[name="amount[]"]');
+        if (itemInput && amountInput && itemInput.value.trim() !== '' && parseFloat(amountInput.value) > 0) {
+          currentEntries.push({
+            item: itemInput.value.trim(),
+            amount: parseFloat(amountInput.value)
+          });
+        }
+      });
+
+      expensesByDate[selectedDate] = currentEntries;
+      saveExpensesToLocalStorage();
+      // REMOVED: alert('Expenses saved locally!');
+      window.location.href = 'home.html'; // Redirect back to home
+    });
+
+    window.onload = function() {
+      loadExpensesFromLocalStorage();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
+
+      document.getElementById('date').value = initialDate;
+      redirectWithDate(initialDate); // This will set the display date and load expenses
+    };
+  </script>
+</body>
+</html>
